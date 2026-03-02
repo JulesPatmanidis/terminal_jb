@@ -1,5 +1,8 @@
 package org.example;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 /**
  * Basic operations
  *
@@ -90,7 +93,6 @@ public class TerminalBuffer {
     public static final String HIDDEN = "\u001B[8m";
     public static final String STRIKETHROUGH = "\u001B[9m";
 
-
     // Setup
     private int screenWidth;
     private int screenHeight;
@@ -115,41 +117,31 @@ public class TerminalBuffer {
 
     private CursorPos cursorPos;
 
-    private static class Cell {
-        public String foreground;
-        public String background;
-        public String styles;
-        public char character;
-
-        public Cell(String foreground, String background, String styles, char character) {
-            this.foreground = foreground;
-            this.background = background;
-            this.styles = styles;
-            this.character = character;
-        }
-    }
-
     /*
-    * Initial idea for cells, will be refined
-    * Have static array holding all cells, width is screenWidth, height is screenHeight + maxScrollback
-    * This implies that we can "scroll" the screen by changing start/end height pointers
-    * When lines are added and we reach max scrollback, we need to shift every row up.
+    * For now assume lines are fixed width
+    * We split the viewable area into screen and scrollback, screen is simple array of lines,
+    * scrollback is deque of lines for faster adding and removing top/bottom lines
+    *
     *
     * */
-    private Cell[][] cells;
+    private Line[] screenLines;
+    private Deque<Line> scrollback;
 
     public TerminalBuffer(int width, int height, int maxScrollback) {
         this.screenWidth = width;
         this.screenHeight = height;
         this.maxScrollback = maxScrollback;
-        this.cells = new Cell[height + maxScrollback][width];
+        this.screenLines = new Line[height];
 
         // Initialize cells with default attributes
         for (int i = 0; i < height; i++) {
+            screenLines[i] = new Line(width);
             for (int j = 0; j < width; j++) {
-                cells[i][j] = new Cell(BLACK, BG_BLACK, "", ' ');
+                screenLines[i].cells[j] = new Cell(BLACK, BG_BLACK, "", ' ');
             }
         }
+
+        scrollback = new ArrayDeque<>();
 
         this.cursorPos = new CursorPos(0, 0);
         this.foreground = BLACK;
