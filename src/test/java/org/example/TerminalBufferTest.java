@@ -110,8 +110,7 @@ class TerminalBufferTest {
         assertEquals(attrs, buffer.getAttributes());
         buffer.writeText("Q");
         assertEquals(attrs, buffer.getScreenAttributesAt(0, 0));
-
-        TextAttributes defaults = new TextAttributes(TerminalBuffer.BLACK, TerminalBuffer.BG_BLACK, "");
+        TextAttributes defaults = new TextAttributes(TerminalBuffer.WHITE, TerminalBuffer.BG_BLACK, "");
         assertEquals(defaults, buffer.getScreenAttributesAt(-1, 0));
     }
 
@@ -134,7 +133,7 @@ class TerminalBufferTest {
         buffer.setAttributes(attrs);
         buffer.writeText("A\nB\nC");
 
-        TextAttributes defaults = new TextAttributes(TerminalBuffer.BLACK, TerminalBuffer.BG_BLACK, "");
+        TextAttributes defaults = new TextAttributes(TerminalBuffer.WHITE, TerminalBuffer.BG_BLACK, "");
         assertEquals(attrs, buffer.getScrollbackAttributesAt(0, 0));
         assertEquals(defaults, buffer.getScrollbackAttributesAt(1, 0));
         assertEquals(defaults, buffer.getScrollbackAttributesAt(0, 1));

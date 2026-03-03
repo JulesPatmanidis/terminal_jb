@@ -5,43 +5,6 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
 
-/**
- * Basic operations
- *
- * Implement a TerminalBuffer class (or equivalent) supporting the following operations:
- *
- * Setup
- * - Configurable initial width and height
- * - Configurable scrollback maximum size (number of lines)
- *
- * Attributes
- * - Set current attributes: foreground, background and styles. These attributes should be used for further edits.
- *
- * Cursor
- * - Get/set cursor position (column, row)
- * - Move cursor: up, down, left, right by N cells
- * - Cursor must not move outside screen bounds
- *
- * Editing
- *
- * Operations that should take the current cursor position and attributes into account:
- *
- * - Write a text on a line, overriding the current content. Moves the cursor.
- * - Insert a text on a line, possibly wrapping the line. Moves the cursor.
- * - Fill a line with a character (or empty)
- *
- * Operations that do not depend on cursor position or attributes:
- * - Insert an empty line at the bottom of the screen
- * - Clear the entire screen
- * - Clear the screen and scrollback
- *
- * Content Access
- * - Get character at position (from screen and scrollback)
- * - Get attributes at position (from screen and scrollback)
- * - Get line as string (from screen and scrollback)
- * - Get entire screen content as string
- * - Get entire screen+scrollback content as string
- */
 public class TerminalBuffer {
 
     // Regular colors
@@ -101,7 +64,7 @@ public class TerminalBuffer {
     private final int maxScrollback;
 
     // Attributes
-    private static final TextAttributes DEFAULT_TEXT_ATTRIBUTES = new TextAttributes(BLACK, BG_BLACK, "");
+    private static final TextAttributes DEFAULT_TEXT_ATTRIBUTES = new TextAttributes(WHITE, BG_BLACK, "");
     private TextAttributes currentTextAttributes;
     private Cursor cursor;
 
@@ -300,7 +263,6 @@ public class TerminalBuffer {
             return screenLines[y].getCell(x).getCharacter();
         }
 
-        // TODO: Think about what will be the default char to return
         return ' ';
     }
 

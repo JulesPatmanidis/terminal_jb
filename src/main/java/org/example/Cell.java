@@ -7,10 +7,6 @@ public class Cell {
     private char character;
     private boolean empty;
 
-    public Cell(TextAttributes attributes, char character) {
-        this(attributes, character, false);
-    }
-
     public Cell(TextAttributes attributes, char character, boolean empty) {
         this.attributes = Objects.requireNonNull(attributes, "attributes");
         this.character = character;
