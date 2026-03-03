@@ -206,7 +206,23 @@ public class TerminalBuffer {
      * @param text The text to write
      */
     public void writeText(String text) {
-        // TODO: implement
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+
+        ArrayList<String> parts = splitInputIfNeeded(text);
+        for (int i = 0; i < parts.size(); i++) {
+            String part = parts.get(i);
+            if (!part.isEmpty()) {
+                for (int j = 0; j < part.length(); j++) {
+                    writeChar(part.charAt(j));
+                }
+            }
+
+            if (i < parts.size() - 1) {
+                breakLine();
+            }
+        }
     }
 
     /**
@@ -225,22 +241,7 @@ public class TerminalBuffer {
             if (!part.isEmpty()) {
                 shiftTextRight(cursorPos.x, cursorPos.y, part.length());
                 for (int j = 0; j < part.length(); j++) {
-                    char c = part.charAt(j);
-
-                    Cell currCell = ensureCell(cursorPos.y, cursorPos.x);
-                    currCell.character = c;
-                    currCell.foreground = foreground;
-                    currCell.background = background;
-                    currCell.styles = styles;
-
-                    int cursorIdx = cursorPos.x + cursorPos.y * screenWidth;
-                    contentEndIdx = Math.max(contentEndIdx, cursorIdx + 1);
-
-                    if (cursorPos.x == screenWidth - 1) {
-                        breakLine();
-                    } else {
-                        cursorPos.x++;
-                    }
+                    writeChar(part.charAt(j));
                 }
             }
 
@@ -348,6 +349,23 @@ public class TerminalBuffer {
         // Keep the trailing segment so inputs ending with '\n' preserve the last line break.
         parts.add(line.substring(segmentStart));
         return parts;
+    }
+
+    private void writeChar(char c) {
+        Cell currCell = ensureCell(cursorPos.y, cursorPos.x);
+        currCell.character = c;
+        currCell.foreground = foreground;
+        currCell.background = background;
+        currCell.styles = styles;
+
+        int cursorIdx = cursorPos.x + cursorPos.y * screenWidth;
+        contentEndIdx = Math.max(contentEndIdx, cursorIdx + 1);
+
+        if (cursorPos.x == screenWidth - 1) {
+            breakLine();
+        } else {
+            cursorPos.x++;
+        }
     }
 
     // Adds a new line to the screen and scroll if needed
