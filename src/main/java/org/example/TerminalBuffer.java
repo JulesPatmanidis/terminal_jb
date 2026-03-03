@@ -102,22 +102,9 @@ public class TerminalBuffer {
     private int maxScrollback;
 
     // Attributes
-    private String foreground;
-    private String background;
-    private String styles;
-
-    // Cursor TODO: move to separate class
-    public class CursorPos {
-        private int x;
-        private int y;
-
-        public CursorPos(int x, int y) {
-            this.x = x;
-            this.y = y;
-        }
-    }
-
-    private CursorPos cursorPos;
+    private static final TextAttributes DEFAULT_TEXT_ATTRIBUTES = new TextAttributes(BLACK, BG_BLACK, "");
+    private TextAttributes currentTextAttributes;
+    private Cursor cursor;
 
     /*
     * For now assume lines are fixed width
@@ -143,39 +130,48 @@ public class TerminalBuffer {
 
         scrollback = new ArrayDeque<>();
 
-        this.cursorPos = new CursorPos(0, 0);
+        this.cursor = new Cursor(0, 0);
         this.contentEndIdx = 0;
-        this.foreground = BLACK;
-        this.background = BG_BLACK;
-        this.styles = "";
+        this.currentTextAttributes = DEFAULT_TEXT_ATTRIBUTES;
     }
 
     public String getForeground() {
-        return foreground;
+        return currentTextAttributes.foreground();
     }
 
     public void setForeground(String foreground) {
-        this.foreground = foreground;
+        this.currentTextAttributes = new TextAttributes(foreground, currentTextAttributes.background(), currentTextAttributes.styles());
     }
 
     public String getBackground() {
-        return background;
+        return currentTextAttributes.background();
     }
 
     public void setBackground(String background) {
-        this.background = background;
+        this.currentTextAttributes = new TextAttributes(currentTextAttributes.foreground(), background, currentTextAttributes.styles());
     }
 
     public String getStyles() {
-        return styles;
+        return currentTextAttributes.styles();
     }
 
     public void setStyles(String styles) {
-        this.styles = styles;
+        this.currentTextAttributes = new TextAttributes(currentTextAttributes.foreground(), currentTextAttributes.background(), styles);
     }
 
-    public CursorPos getCursorPos() {
-        return cursorPos;
+    public TextAttributes getAttributes() {
+        return currentTextAttributes;
+    }
+
+    public void setAttributes(TextAttributes textAttributes) {
+        if (textAttributes == null) {
+            return;
+        }
+        this.currentTextAttributes = textAttributes;
+    }
+
+    public Cursor getCursorPos() {
+        return cursor;
     }
 
     public void setCursorPos(int x, int y) {
@@ -184,13 +180,12 @@ public class TerminalBuffer {
             IO.println("Invalid cursor position: (" + x + ", " + y + ")");
             return;
         }
-        this.cursorPos.x = x;
-        this.cursorPos.y = y;
+        this.cursor = new Cursor(x, y);
     }
 
     public void moveCursor(int deltaX, int deltaY) {
-        int rawX = cursorPos.x + deltaX;
-        int rawY = cursorPos.y + deltaY;
+        int rawX = cursor.x() + deltaX;
+        int rawY = cursor.y() + deltaY;
 
         // Calculate new cursor position with wrapping
         int rowCarry = Math.floorDiv(rawX, screenWidth);
@@ -240,7 +235,7 @@ public class TerminalBuffer {
             String part = parts.get(i);
 
             if (!part.isEmpty()) {
-                shiftTextRight(cursorPos.x, cursorPos.y, part.length());
+                shiftTextRight(cursor.x(), cursor.y(), part.length());
                 for (int j = 0; j < part.length(); j++) {
                     writeChar(part.charAt(j));
                 }
@@ -254,7 +249,7 @@ public class TerminalBuffer {
 
 
     public void fillLine(char character) {
-        int startIdx = cursorPos.x;
+        int startIdx = cursor.x();
         int endIdx = screenWidth;
 
         for (int i = startIdx; i < endIdx; i++) {
@@ -284,8 +279,7 @@ public class TerminalBuffer {
             }
         }
 
-        cursorPos.x = 0;
-        cursorPos.y = 0;
+        cursor = new Cursor(0, 0);
         contentEndIdx = 0;
     }
 
@@ -318,9 +312,17 @@ public class TerminalBuffer {
         return line.cells[x].character;
     }
 
-    public void getScreenAttributesAt(int x, int y) {
-        // TODO: implement
-        // Probably need to move attributes to a separate class
+    public TextAttributes getScreenAttributesAt(int x, int y) {
+        if (x < 0 || x >= screenWidth || y < 0 || y >= screenHeight) {
+            return DEFAULT_TEXT_ATTRIBUTES;
+        }
+
+        Cell cell = screenLines[y].cells[x];
+        if (cell == null) {
+            return DEFAULT_TEXT_ATTRIBUTES;
+        }
+
+        return new TextAttributes(cell.foreground, cell.background, cell.styles);
     }
 
     public Line getScrollbackLineAt(int y) {
@@ -401,36 +403,36 @@ public class TerminalBuffer {
     }
 
     private void writeChar(char c) {
-        Cell currCell = ensureCell(cursorPos.y, cursorPos.x);
+        Cell currCell = ensureCell(cursor.y(), cursor.x());
         currCell.character = c;
-        currCell.foreground = foreground;
-        currCell.background = background;
-        currCell.styles = styles;
+        currCell.foreground = currentTextAttributes.foreground();
+        currCell.background = currentTextAttributes.background();
+        currCell.styles = currentTextAttributes.styles();
 
-        int cursorIdx = cursorPos.x + cursorPos.y * screenWidth;
+        int cursorIdx = cursor.x() + cursor.y() * screenWidth;
         contentEndIdx = Math.max(contentEndIdx, cursorIdx + 1);
 
-        if (cursorPos.x == screenWidth - 1) {
+        if (cursor.x() == screenWidth - 1) {
             breakLine();
         } else {
-            cursorPos.x++;
+            setCursorPos(cursor.x() + 1, cursor.y());
         }
     }
 
     // Adds a new line to the screen and scroll if needed
     private void breakLine() {
-        if (cursorPos.y == screenHeight - 1) {
+        if (cursor.y() == screenHeight - 1) {
             addLineToScrollback(screenLines[0]);
             for (int i = 0; i < screenHeight - 1; i++) {
                 screenLines[i] = screenLines[i + 1];
             }
             screenLines[screenHeight - 1] = createEmptyLine();
         } else {
-            cursorPos.y++;
+            setCursorPos(cursor.x(), cursor.y() + 1);
         }
 
-        cursorPos.x = 0;
-        int cursorIdx = cursorPos.x + cursorPos.y * screenWidth;
+        setCursorPos(0, cursor.y());
+        int cursorIdx = cursor.x() + cursor.y() * screenWidth;
         contentEndIdx = Math.min(Math.max(contentEndIdx, cursorIdx), screenWidth * screenHeight);
     }
 
@@ -492,9 +494,9 @@ public class TerminalBuffer {
 
     private void clearCell(int lineIdx, int cellIdx) {
         Cell cell = ensureCell(lineIdx, cellIdx);
-        cell.foreground = BLACK;
-        cell.background = BG_BLACK;
-        cell.styles = "";
+        cell.foreground = DEFAULT_TEXT_ATTRIBUTES.foreground();
+        cell.background = DEFAULT_TEXT_ATTRIBUTES.background();
+        cell.styles = DEFAULT_TEXT_ATTRIBUTES.styles();
         cell.character = ' ';
     }
 
