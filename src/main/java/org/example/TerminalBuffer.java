@@ -1,6 +1,7 @@
 package org.example;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 
 /**
@@ -126,6 +127,7 @@ public class TerminalBuffer {
     * */
     private Line[] screenLines;
     private Deque<Line> scrollback;
+    private int contentEndIdx;
 
     public TerminalBuffer(int width, int height, int maxScrollback) {
         this.screenWidth = width;
@@ -135,15 +137,13 @@ public class TerminalBuffer {
 
         // Initialize cells with default attributes
         for (int i = 0; i < height; i++) {
-            screenLines[i] = new Line(width);
-            for (int j = 0; j < width; j++) {
-                screenLines[i].cells[j] = new Cell(BLACK, BG_BLACK, "", ' ');
-            }
+            screenLines[i] = createEmptyLine();
         }
 
         scrollback = new ArrayDeque<>();
 
         this.cursorPos = new CursorPos(0, 0);
+        this.contentEndIdx = 0;
         this.foreground = BLACK;
         this.background = BG_BLACK;
         this.styles = "";
@@ -187,17 +187,67 @@ public class TerminalBuffer {
         this.cursorPos.y = y;
     }
 
-    public void moveCursor(int x, int y) {
-        setCursorPos(cursorPos.x + x, cursorPos.y + y);
+    public void moveCursor(int deltaX, int deltaY) {
+        int rawX = cursorPos.x + deltaX;
+        int rawY = cursorPos.y + deltaY;
+
+        // Calculate new cursor position with wrapping
+        int rowCarry = Math.floorDiv(rawX, screenWidth);
+        int wrappedX = Math.floorMod(rawX, screenWidth);
+        int wrappedY = Math.floorMod(rawY + rowCarry, screenHeight);
+        //IO.println("Wrapping: (" + rawX + ", " + rawY + ") -> (" + wrappedX + ", " + wrappedY + ")");
+        setCursorPos(wrappedX, wrappedY);
     }
 
     // Editing
+
+    /**
+     * Writes text on the current line, overriding the current content.
+     * @param text The text to write
+     */
     public void writeText(String text) {
         // TODO: implement
     }
 
+    /**
+     * Inserts text on the current line, possibly wrapping the line. Characters after the inserted text are moved to the right.
+     * @param text The text to insert
+     */
     public void insertText(String text) {
-        // TODO: implement
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+
+        ArrayList<String> parts = splitInputIfNeeded(text);
+        for (int i = 0; i < parts.size(); i++) {
+            String part = parts.get(i);
+
+            if (!part.isEmpty()) {
+                shiftTextRight(cursorPos.x, cursorPos.y, part.length());
+                for (int j = 0; j < part.length(); j++) {
+                    char c = part.charAt(j);
+
+                    Cell currCell = ensureCell(cursorPos.y, cursorPos.x);
+                    currCell.character = c;
+                    currCell.foreground = foreground;
+                    currCell.background = background;
+                    currCell.styles = styles;
+
+                    int cursorIdx = cursorPos.x + cursorPos.y * screenWidth;
+                    contentEndIdx = Math.max(contentEndIdx, cursorIdx + 1);
+
+                    if (cursorPos.x == screenWidth - 1) {
+                        breakLine();
+                    } else {
+                        cursorPos.x++;
+                    }
+                }
+            }
+
+            if (i < parts.size() - 1) {
+                breakLine();
+            }
+        }
     }
 
     public void fillLine(char character) {
@@ -205,7 +255,11 @@ public class TerminalBuffer {
     }
 
     public void insertEmptyLine() {
-        // TODO: implement
+        addLineToScrollback(screenLines[0]);
+        for (int i = 0; i < screenHeight - 1; i++) {
+            screenLines[i] = screenLines[i + 1];
+        }
+        screenLines[screenHeight - 1] = createEmptyLine();
     }
 
     public void clearScreen() {
@@ -214,6 +268,33 @@ public class TerminalBuffer {
 
     public void clearScreenAndScrollback() {
         // TODO: implement
+    }
+
+    // Debug helper: print scrollback and visible screen lines.
+    public void debugPrintScreenAndScrollback() {
+        System.out.println("=== Scrollback (" + scrollback.size() + " lines) ===");
+        int scrollbackIndex = 0;
+        for (Line line : scrollback) {
+            System.out.println("SB[" + scrollbackIndex + "]: " + lineToDebugString(line));
+            scrollbackIndex++;
+        }
+
+        System.out.println("=== Screen (" + screenLines.length + " lines) ===");
+        for (int i = 0; i < screenLines.length; i++) {
+            System.out.println("SC[" + i + "]: " + lineToDebugString(screenLines[i]));
+        }
+    }
+
+    private String lineToDebugString(Line line) {
+        if (line == null || line.cells == null) {
+            return "";
+        }
+
+        StringBuilder result = new StringBuilder(line.cells.length);
+        for (Cell cell : line.cells) {
+            result.append(cell == null ? ' ' : cell.character);
+        }
+        return result.toString();
     }
 
     // Content Access
@@ -240,6 +321,121 @@ public class TerminalBuffer {
     public String getScreenAndScrollbackContent() {
         // TODO: implement
         return "";
+    }
+
+    // Helpers
+
+    private void addLineToScrollback(Line line) {
+        scrollback.addLast(line);
+
+        if (scrollback.size() > maxScrollback) {
+            scrollback.removeFirst();
+        }
+    }
+
+
+    private ArrayList<String> splitInputIfNeeded(String line) {
+        ArrayList<String> parts = new ArrayList<>();
+        int segmentStart = 0;
+
+        for (int i = 0; i < line.length(); i++) {
+            if (line.charAt(i) == '\n') {
+                parts.add(line.substring(segmentStart, i));
+                segmentStart = i + 1;
+            }
+        }
+
+        // Keep the trailing segment so inputs ending with '\n' preserve the last line break.
+        parts.add(line.substring(segmentStart));
+        return parts;
+    }
+
+    // Adds a new line to the screen and scroll if needed
+    private void breakLine() {
+        if (cursorPos.y == screenHeight - 1) {
+            addLineToScrollback(screenLines[0]);
+            for (int i = 0; i < screenHeight - 1; i++) {
+                screenLines[i] = screenLines[i + 1];
+            }
+            screenLines[screenHeight - 1] = createEmptyLine();
+        } else {
+            cursorPos.y++;
+        }
+
+        cursorPos.x = 0;
+        int cursorIdx = cursorPos.x + cursorPos.y * screenWidth;
+        contentEndIdx = Math.min(Math.max(contentEndIdx, cursorIdx), screenWidth * screenHeight);
+    }
+
+    private void shiftTextRight(int x, int y, int shiftAmount) {
+        if (shiftAmount <= 0) {
+            return;
+        }
+
+        int insertIdx = x + y * screenWidth;
+        int maxCells = screenWidth * screenHeight;
+        int endExclusive = Math.min(contentEndIdx, maxCells);
+
+        if (insertIdx >= endExclusive) {
+            return;
+        }
+
+        for (int sourceIdx = endExclusive - 1; sourceIdx >= insertIdx; sourceIdx--) {
+            int targetIdx = sourceIdx + shiftAmount;
+            if (targetIdx >= maxCells) {
+                continue;
+            }
+
+            Cell source = getCellAtAbsoluteIndex(sourceIdx);
+            Cell target = ensureCell(targetIdx / screenWidth, targetIdx % screenWidth);
+            copyCell(source, target);
+        }
+
+        int clearEnd = Math.min(insertIdx + shiftAmount, maxCells);
+        for (int idx = insertIdx; idx < clearEnd; idx++) {
+            clearCell(idx / screenWidth, idx % screenWidth);
+        }
+
+        contentEndIdx = Math.min(endExclusive + shiftAmount, maxCells);
+    }
+
+    private Line createEmptyLine() {
+        Line line = new Line(screenWidth);
+        for (int i = 0; i < screenWidth; i++) {
+            line.cells[i] = new Cell(BLACK, BG_BLACK, "", ' ');
+        }
+        return line;
+    }
+
+    private Cell ensureCell(int lineIdx, int cellIdx) {
+        if (screenLines[lineIdx] == null) {
+            screenLines[lineIdx] = createEmptyLine();
+        }
+        if (screenLines[lineIdx].cells[cellIdx] == null) {
+            screenLines[lineIdx].cells[cellIdx] = new Cell(BLACK, BG_BLACK, "", ' ');
+        }
+        return screenLines[lineIdx].cells[cellIdx];
+    }
+
+    private Cell getCellAtAbsoluteIndex(int absoluteIdx) {
+        int lineIdx = absoluteIdx / screenWidth;
+        int cellIdx = absoluteIdx % screenWidth;
+        return ensureCell(lineIdx, cellIdx);
+    }
+
+    private void clearCell(int lineIdx, int cellIdx) {
+        Cell cell = ensureCell(lineIdx, cellIdx);
+        cell.foreground = BLACK;
+        cell.background = BG_BLACK;
+        cell.styles = "";
+        cell.character = ' ';
+    }
+
+    private void copyCell(Cell source, Cell target) {
+        target.foreground = source.foreground;
+        target.background = source.background;
+        target.styles = source.styles;
+        target.character = source.character;
     }
 
 }

@@ -2,8 +2,13 @@ package org.example;
 
 public class Main {
     static void main() {
-        TerminalBuffer terminalBuffer = new TerminalBuffer(80, 25, 1000);
+        TerminalBuffer terminalBuffer = new TerminalBuffer(20, 5, 1000);
 
-
+        terminalBuffer.clearScreen();
+        terminalBuffer.insertText("HelloHelloWoops");
+        terminalBuffer.debugPrintScreenAndScrollback();
+        terminalBuffer.moveCursor(-5, 0);
+        terminalBuffer.insertText("Hello");
+        terminalBuffer.debugPrintScreenAndScrollback();
     }
 }
