@@ -21,7 +21,7 @@ public class Line {
         return cells[index];
     }
 
-    public void setCell(int index, Cell cell) {
+    void setCell(int index, Cell cell) {
         cells[index] = Objects.requireNonNull(cell, "cell");
     }
 }

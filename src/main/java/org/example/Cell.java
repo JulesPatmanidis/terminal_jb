@@ -21,7 +21,7 @@ public class Cell {
         return attributes;
     }
 
-    public void setAttributes(TextAttributes attributes) {
+    void setAttributes(TextAttributes attributes) {
         this.attributes = Objects.requireNonNull(attributes, "attributes");
     }
 
@@ -29,7 +29,7 @@ public class Cell {
         return character;
     }
 
-    public void setCharacter(char character) {
+    void setCharacter(char character) {
         this.character = character;
     }
 
@@ -37,7 +37,7 @@ public class Cell {
         return empty;
     }
 
-    public void setEmpty(boolean empty) {
+    void setEmpty(boolean empty) {
         this.empty = empty;
     }
 }

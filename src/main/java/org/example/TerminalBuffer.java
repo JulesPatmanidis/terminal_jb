@@ -310,7 +310,7 @@ public class TerminalBuffer {
             return ' ';
         }
 
-        Line line = getScrollbackLineAt(y);
+        Line line = getScrollbackLineInternal(y);
         if (line == null) {
             return ' ';
         }
@@ -340,7 +340,7 @@ public class TerminalBuffer {
         if (x < 0 || x >= screenWidth || y < 0 || y >= scrollbackSize) {
             return DEFAULT_TEXT_ATTRIBUTES;
         }
-        Line line = getScrollbackLineAt(y);
+        Line line = getScrollbackLineInternal(y);
         if (line == null) {
             return DEFAULT_TEXT_ATTRIBUTES;
         }
@@ -352,7 +352,18 @@ public class TerminalBuffer {
         return cell.getAttributes();
     }
 
+    /**
+     * Returns a copy of the line at scrollback level y
+     */
     public Line getScrollbackLineAt(int y) {
+        Line internal = getScrollbackLineInternal(y);
+        return internal == null ? null : copyLine(internal);
+    }
+
+    /**
+     * Returns the line at scrollback level y
+     */
+    private Line getScrollbackLineInternal(int y) {
         int size = scrollback.size();
         if (y < 0 || y >= size) {
             return null;
@@ -365,12 +376,15 @@ public class TerminalBuffer {
         return it.next();
     }
 
+    /**
+     * Returns a copy of the screen line at level y
+     */
     public Line getScreenLineAt(int y) {
         if (y < 0 || y >= screenHeight) {
             return null;
         }
 
-        return screenLines[y];
+        return copyLine(screenLines[y]);
     }
 
     public String getScreenContent() {
@@ -510,6 +524,19 @@ public class TerminalBuffer {
 
     private Line createEmptyLine() {
         return new Line(screenWidth, DEFAULT_TEXT_ATTRIBUTES);
+    }
+
+    private Line copyLine(Line source) {
+        Line copy = createEmptyLine();
+        for (int i = 0; i < source.length(); i++) {
+            Cell sourceCell = source.getCell(i);
+            copy.setCell(i, copyCell(sourceCell));
+        }
+        return copy;
+    }
+
+    private Cell copyCell(Cell source) {
+        return new Cell(source.getAttributes(), source.getCharacter(), source.isEmpty());
     }
 
     private Cell ensureCell(int lineIdx, int cellIdx) {

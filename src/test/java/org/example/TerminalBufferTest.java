@@ -147,6 +147,28 @@ class TerminalBufferTest {
         assertEquals("AAAAA\nBBBBB\nCC   \n", buffer.getScreenAndScrollbackContent());
     }
 
+    @Test
+    void getScreenLineAtReturnsCopy() {
+        TerminalBuffer buffer = new TerminalBuffer(5, 2, 10);
+        buffer.writeText("A");
+
+        Line line = buffer.getScreenLineAt(0);
+        line.setCell(0, new Cell(new TextAttributes(TerminalBuffer.RED, TerminalBuffer.BG_BLACK, ""), 'Z', false));
+
+        assertEquals('A', buffer.getScreenCharAt(0, 0));
+    }
+
+    @Test
+    void getScrollbackLineAtReturnsCopy() {
+        TerminalBuffer buffer = new TerminalBuffer(5, 2, 10);
+        buffer.writeText("AAAAA\nBBBBB\nCC");
+
+        Line line = buffer.getScrollbackLineAt(0);
+        line.setCell(0, new Cell(new TextAttributes(TerminalBuffer.RED, TerminalBuffer.BG_BLACK, ""), 'Z', false));
+
+        assertEquals('A', buffer.getScrollbackCharAt(0, 0));
+    }
+
     private static void assertScreenLineEquals(TerminalBuffer buffer, int y, String expected) {
         Line line = buffer.getScreenLineAt(y);
         assertNotNull(line);
