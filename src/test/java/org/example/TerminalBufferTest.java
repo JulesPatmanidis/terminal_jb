@@ -102,6 +102,21 @@ class TerminalBufferTest {
     }
 
     @Test
+    void insertEmptyLineAlwaysScrollsScreenRegardlessOfContentEnd() {
+        TerminalBuffer buffer = new TerminalBuffer(5, 3, 10);
+        buffer.writeText("AB");
+        buffer.setCursorPos(2, 0);
+
+        buffer.insertEmptyLine();
+
+        assertEquals('A', buffer.getScrollbackCharAt(0, 0));
+        assertEquals('B', buffer.getScrollbackCharAt(1, 0));
+        assertEquals("     \n     \n     \n", buffer.getScreenContent());
+        assertEquals(2, buffer.getCursorPos().x());
+        assertEquals(0, buffer.getCursorPos().y());
+    }
+
+    @Test
     void attributesAreStoredAndReturned() {
         TerminalBuffer buffer = new TerminalBuffer(5, 2, 10);
         TextAttributes attrs = new TextAttributes(TerminalBuffer.RED, TerminalBuffer.BG_BLUE, TerminalBuffer.BOLD);

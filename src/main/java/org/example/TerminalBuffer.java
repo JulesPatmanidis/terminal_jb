@@ -222,20 +222,13 @@ public class TerminalBuffer {
      * Inserts empty line at the bottom of the screen.
      */
     public void insertEmptyLine() {
-        // We need to move the content index as well
-        int contentEndLine = contentEndIdx / screenWidth;
-        if (contentEndLine == screenHeight - 1) {
-            // We are at the bottom of the screen already
-            addLineToScrollback(screenLines[0]);
-            for (int i = 0; i < screenHeight - 1; i++) {
-                screenLines[i] = screenLines[i + 1];
-            }
-            screenLines[screenHeight - 1] = createEmptyLine();
-        } else {
-            // we just need to move the content index AND the cursor position
-            contentEndIdx += screenWidth;
-            setCursorPos(0, cursor.y() + 1);
+        addLineToScrollback(screenLines[0]);
+        for (int i = 0; i < screenHeight - 1; i++) {
+            screenLines[i] = screenLines[i + 1];
         }
+        screenLines[screenHeight - 1] = createEmptyLine();
+
+        contentEndIdx = Math.max(0, contentEndIdx - screenWidth);
     }
 
     /**
