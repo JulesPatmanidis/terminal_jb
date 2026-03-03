@@ -3,6 +3,7 @@ package org.example;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.Iterator;
 
 /**
  * Basic operations
@@ -251,10 +252,20 @@ public class TerminalBuffer {
         }
     }
 
+
     public void fillLine(char character) {
-        // TODO: implement
+        int startIdx = cursorPos.x;
+        int endIdx = screenWidth;
+
+        for (int i = startIdx; i < endIdx; i++) {
+            writeChar(character);
+        }
     }
 
+    /**
+     * Inserts empty line at the bottom of the screen.
+     * TODO: Decide if we want to move the cursor to the new line.
+     */
     public void insertEmptyLine() {
         addLineToScrollback(screenLines[0]);
         for (int i = 0; i < screenHeight - 1; i++) {
@@ -263,65 +274,104 @@ public class TerminalBuffer {
         screenLines[screenHeight - 1] = createEmptyLine();
     }
 
+    /**
+     * Clears the entire screen, keep scrollback.
+     */
     public void clearScreen() {
-        // TODO: implement
+        for (int i = 0; i < screenHeight; i++) {
+            for (int j = 0; j < screenWidth; j++) {
+                clearCell(i, j);
+            }
+        }
+
+        cursorPos.x = 0;
+        cursorPos.y = 0;
+        contentEndIdx = 0;
     }
 
     public void clearScreenAndScrollback() {
-        // TODO: implement
-    }
-
-    // Debug helper: print scrollback and visible screen lines.
-    public void debugPrintScreenAndScrollback() {
-        System.out.println("=== Scrollback (" + scrollback.size() + " lines) ===");
-        int scrollbackIndex = 0;
-        for (Line line : scrollback) {
-            System.out.println("SB[" + scrollbackIndex + "]: " + lineToDebugString(line));
-            scrollbackIndex++;
-        }
-
-        System.out.println("=== Screen (" + screenLines.length + " lines) ===");
-        for (int i = 0; i < screenLines.length; i++) {
-            System.out.println("SC[" + i + "]: " + lineToDebugString(screenLines[i]));
-        }
-    }
-
-    private String lineToDebugString(Line line) {
-        if (line == null || line.cells == null) {
-            return "";
-        }
-
-        StringBuilder result = new StringBuilder(line.cells.length);
-        for (Cell cell : line.cells) {
-            result.append(cell == null ? ' ' : cell.character);
-        }
-        return result.toString();
+        clearScreen();
+        scrollback.clear();
     }
 
     // Content Access
-    public char getCharAt(int x, int y) {
-        // TODO: implement
+    public char getScreenCharAt(int x, int y) {
+        if (x >= 0 && x < screenWidth && y >= 0 && y < screenHeight) {
+            return screenLines[y].cells[x].character;
+        }
+
+        // TODO: Think about what will be the default char to return
         return ' ';
     }
 
-    public void getAttributesAt(int x, int y) {
+    public char getScrollbackCharAt(int x, int y) {
+        int scrollbackSize = scrollback.size();
+        if (x < 0 || x >= screenWidth || y < 0 || y >= scrollbackSize) {
+            return ' ';
+        }
+
+        Line line = getScrollbackLineAt(y);
+        if (line == null || line.cells == null || line.cells[x] == null) {
+            return ' ';
+        }
+
+        return line.cells[x].character;
+    }
+
+    public void getScreenAttributesAt(int x, int y) {
         // TODO: implement
         // Probably need to move attributes to a separate class
     }
 
-    public String getLineAt(int y) {
-        // TODO: implement
-        return "";
+    public Line getScrollbackLineAt(int y) {
+        int size = scrollback.size();
+        if (y < 0 || y >= size) {
+            return null;
+        }
+
+        Iterator<Line> it = scrollback.iterator();
+        for (int i = 0; i < y; i++) {
+            it.next();
+        }
+        return it.next();
+    }
+
+    public Line getScreenLineAt(int y) {
+        if (y < 0 || y >= screenHeight) {
+            return null;
+        }
+
+        return screenLines[y];
     }
 
     public String getScreenContent() {
-        // TODO: implement
-        return "";
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < screenHeight; i++) {
+            for (int j = 0; j < screenWidth; j++) {
+                result.append(screenLines[i].cells[j].character);
+            }
+            result.append('\n');
+        }
+        return result.toString();
     }
 
     public String getScreenAndScrollbackContent() {
-        // TODO: implement
-        return "";
+        StringBuilder result = new StringBuilder();
+        for (Line line : scrollback) {
+            for (int j = 0; j < screenWidth; j++) {
+                result.append(line.cells[j].character);
+            }
+            result.append('\n');
+        }
+
+        for (int i = 0; i < screenHeight; i++) {
+            for (int j = 0; j < screenWidth; j++) {
+                result.append(screenLines[i].cells[j].character);
+            }
+            result.append('\n');
+        }
+
+        return result.toString();
     }
 
     // Helpers
@@ -333,7 +383,6 @@ public class TerminalBuffer {
             scrollback.removeFirst();
         }
     }
-
 
     private ArrayList<String> splitInputIfNeeded(String line) {
         ArrayList<String> parts = new ArrayList<>();
@@ -454,6 +503,34 @@ public class TerminalBuffer {
         target.background = source.background;
         target.styles = source.styles;
         target.character = source.character;
+    }
+
+
+    // Debug helper: print scrollback and visible screen lines.
+    public void debugPrintScreenAndScrollback() {
+        System.out.println("=== Scrollback (" + scrollback.size() + " lines) ===");
+        int scrollbackIndex = 0;
+        for (Line line : scrollback) {
+            System.out.println("SB[" + scrollbackIndex + "]: " + lineToDebugString(line));
+            scrollbackIndex++;
+        }
+
+        System.out.println("=== Screen (" + screenLines.length + " lines) ===");
+        for (int i = 0; i < screenLines.length; i++) {
+            System.out.println("SC[" + i + "]: " + lineToDebugString(screenLines[i]));
+        }
+    }
+
+    private String lineToDebugString(Line line) {
+        if (line == null || line.cells == null) {
+            return "";
+        }
+
+        StringBuilder result = new StringBuilder(line.cells.length);
+        for (Cell cell : line.cells) {
+            result.append(cell == null ? ' ' : cell.character);
+        }
+        return result.toString();
     }
 
 }

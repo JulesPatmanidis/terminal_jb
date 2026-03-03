@@ -8,8 +8,14 @@ public class Main {
         terminalBuffer.insertText("HelloHelloHelloWoops");
         terminalBuffer.debugPrintScreenAndScrollback();
         terminalBuffer.moveCursor(-5, 0);
+        terminalBuffer.clearScreen();
         terminalBuffer.insertText("Hello");
-        terminalBuffer.writeText("World\nWorld");
+        terminalBuffer.writeText("World\nWorldWorld\nWorldWorld\nWorld");
+        terminalBuffer.fillLine('a');
+        terminalBuffer.writeText("OK\noh no");
         terminalBuffer.debugPrintScreenAndScrollback();
+        char c = terminalBuffer.getScrollbackCharAt(3,0);
+        System.out.println(terminalBuffer.getScreenAndScrollbackContent());
+
     }
 }
