@@ -140,38 +140,26 @@ class TerminalBufferTest {
     }
 
     @Test
+    void getScrollbackLineAtReturnsExpectedContentAndHandlesBounds() {
+        TerminalBuffer buffer = new TerminalBuffer(5, 2, 10);
+        buffer.writeText("AAAAA\nBBBBB\nCC");
+
+        assertEquals("AAAAA", buffer.getScrollbackLineAt(0));
+        assertEquals("", buffer.getScrollbackLineAt(1));
+        assertEquals("", buffer.getScrollbackLineAt(-1));
+    }
+
+    @Test
     void getScreenAndScrollbackContentIncludesScrollbackFirst() {
         TerminalBuffer buffer = new TerminalBuffer(5, 2, 10);
         buffer.writeText("AAAAA\nBBBBB\nCC");
         assertEquals("AAAAA\nBBBBB\nCC   \n", buffer.getScreenAndScrollbackContent());
     }
 
-    @Test
-    void getScreenLineAtReturnsCopy() {
-        TerminalBuffer buffer = new TerminalBuffer(5, 2, 10);
-        buffer.writeText("A");
-
-        Line line = buffer.getScreenLineAt(0);
-        line.setCell(0, new Cell(new TextAttributes(TerminalBuffer.RED, TerminalBuffer.BG_BLACK, ""), 'Z', false));
-
-        assertEquals('A', buffer.getScreenCharAt(0, 0));
-    }
-
-    @Test
-    void getScrollbackLineAtReturnsCopy() {
-        TerminalBuffer buffer = new TerminalBuffer(5, 2, 10);
-        buffer.writeText("AAAAA\nBBBBB\nCC");
-
-        Line line = buffer.getScrollbackLineAt(0);
-        line.setCell(0, new Cell(new TextAttributes(TerminalBuffer.RED, TerminalBuffer.BG_BLACK, ""), 'Z', false));
-
-        assertEquals('A', buffer.getScrollbackCharAt(0, 0));
-    }
-
     private static void assertScreenLineEquals(TerminalBuffer buffer, int y, String expected) {
-        Line line = buffer.getScreenLineAt(y);
+        String line = buffer.getScreenLineAt(y);
         assertNotNull(line);
-        assertEquals(expected, lineToString(line));
+        assertEquals(expected, line);
     }
 
     private static String lineToString(Line line) {

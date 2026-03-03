@@ -317,9 +317,20 @@ public class TerminalBuffer {
     /**
      * Returns a copy of the line at scrollback level y
      */
-    public Line getScrollbackLineAt(int y) {
+    public String getScrollbackLineAt(int y) {
         Line internal = getScrollbackLineInternal(y);
-        return internal == null ? null : copyLine(internal);
+        StringBuilder result = new StringBuilder();
+        if (internal != null) {
+            for (int i = 0; i < internal.length(); i++) {
+                Cell cell = internal.getCell(i);
+                if (cell != null) {
+                    result.append(cell.getCharacter());
+                } else {
+                    result.append(' ');
+                }
+            }
+        }
+        return result.toString();
     }
 
     /**
@@ -341,12 +352,22 @@ public class TerminalBuffer {
     /**
      * Returns a copy of the screen line at level y
      */
-    public Line getScreenLineAt(int y) {
+    public String getScreenLineAt(int y) {
         if (y < 0 || y >= screenHeight) {
             return null;
         }
 
-        return copyLine(screenLines[y]);
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < screenWidth; i++) {
+            Cell cell = screenLines[y].getCell(i);
+            if (cell != null) {
+                result.append(cell.getCharacter());
+            } else {
+                result.append(' ');
+            }
+        }
+
+        return result.toString();
     }
 
     public String getScreenContent() {
