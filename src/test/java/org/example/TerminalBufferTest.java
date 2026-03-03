@@ -37,6 +37,19 @@ class TerminalBufferTest {
     }
 
     @Test
+    void writeTextNewlineAfterFullLineAddsOnlyOneLineBreak() {
+        TerminalBuffer buffer = new TerminalBuffer(5, 4, 10);
+
+        buffer.writeText("12345\nX");
+
+        assertScreenLineEquals(buffer, 0, "12345");
+        assertScreenLineEquals(buffer, 1, "X    ");
+        assertScreenLineEquals(buffer, 2, "     ");
+        assertEquals(1, buffer.getCursorPos().x());
+        assertEquals(1, buffer.getCursorPos().y());
+    }
+
+    @Test
     void insertTextShiftsTailToTheRight() {
         TerminalBuffer buffer = new TerminalBuffer(8, 2, 10);
         buffer.writeText("abcdef");

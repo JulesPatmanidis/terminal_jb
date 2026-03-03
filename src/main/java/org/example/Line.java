@@ -9,7 +9,7 @@ public class Line {
     public Line(int width, TextAttributes defaultAttributes) {
         this.cells = new Cell[width];
         for (int i = 0; i < width; i++) {
-            this.cells[i] = new Cell(defaultAttributes, ' ');
+            this.cells[i] = new Cell(defaultAttributes, ' ', true);
         }
     }
 

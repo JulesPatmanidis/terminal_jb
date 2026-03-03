@@ -214,7 +214,7 @@ public class TerminalBuffer {
                 }
             }
 
-            if (i < parts.size() - 1) {
+            if (shouldBreakAfterExplicitNewline(part, i, parts.size())) {
                 breakLine();
             }
         }
@@ -240,7 +240,7 @@ public class TerminalBuffer {
                 }
             }
 
-            if (i < parts.size() - 1) {
+            if (shouldBreakAfterExplicitNewline(part, i, parts.size())) {
                 breakLine();
             }
         }
@@ -429,10 +429,25 @@ public class TerminalBuffer {
         return parts;
     }
 
+    /**
+     * If a non-empty segment ended at column 0, it already wrapped to the next line.
+     * In that case an explicit '\n' right after it must not add a second line break.
+     */
+    private boolean shouldBreakAfterExplicitNewline(String part, int partIdx, int partCount) {
+        if (partIdx >= partCount - 1) {
+            return false;
+        }
+        if (part.isEmpty()) {
+            return true;
+        }
+        return cursor.x() != 0;
+    }
+
     private void writeChar(char c) {
         Cell currCell = ensureCell(cursor.y(), cursor.x());
         currCell.setCharacter(c);
         currCell.setAttributes(currentTextAttributes);
+        currCell.setEmpty(false);
 
         int cursorIdx = cursor.x() + cursor.y() * screenWidth;
         contentEndIdx = Math.max(contentEndIdx, cursorIdx + 1);
@@ -502,7 +517,7 @@ public class TerminalBuffer {
             screenLines[lineIdx] = createEmptyLine();
         }
         if (screenLines[lineIdx].getCell(cellIdx) == null) {
-            screenLines[lineIdx].setCell(cellIdx, new Cell(DEFAULT_TEXT_ATTRIBUTES, ' '));
+            screenLines[lineIdx].setCell(cellIdx, new Cell(DEFAULT_TEXT_ATTRIBUTES, ' ', true));
         }
         return screenLines[lineIdx].getCell(cellIdx);
     }
@@ -517,11 +532,13 @@ public class TerminalBuffer {
         Cell cell = ensureCell(lineIdx, cellIdx);
         cell.setAttributes(DEFAULT_TEXT_ATTRIBUTES);
         cell.setCharacter(' ');
+        cell.setEmpty(true);
     }
 
     private void copyCell(Cell source, Cell target) {
         target.setAttributes(source.getAttributes());
         target.setCharacter(source.getCharacter());
+        target.setEmpty(source.isEmpty());
     }
 
 
@@ -552,5 +569,4 @@ public class TerminalBuffer {
         }
         return result.toString();
     }
-
 }
