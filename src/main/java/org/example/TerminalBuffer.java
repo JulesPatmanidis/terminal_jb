@@ -98,7 +98,6 @@ public class TerminalBuffer {
     // Setup
     private int screenWidth;
     private int screenHeight;
-    // TODO: add implementation for maxScrollback
     private int maxScrollback;
 
     // Attributes
@@ -326,6 +325,23 @@ public class TerminalBuffer {
             return DEFAULT_TEXT_ATTRIBUTES;
         }
 
+        return cell.getAttributes();
+    }
+
+    public TextAttributes getScrollbackAttributesAt(int x, int y) {
+        int scrollbackSize = scrollback.size();
+        if (x < 0 || x >= screenWidth || y < 0 || y >= scrollbackSize) {
+            return DEFAULT_TEXT_ATTRIBUTES;
+        }
+        Line line = getScrollbackLineAt(y);
+        if (line == null) {
+            return DEFAULT_TEXT_ATTRIBUTES;
+        }
+
+        Cell cell = line.getCell(x);
+        if (cell == null) {
+            return DEFAULT_TEXT_ATTRIBUTES;
+        }
         return cell.getAttributes();
     }
 
