@@ -291,7 +291,7 @@ public class TerminalBuffer {
     // Content Access
     public char getScreenCharAt(int x, int y) {
         if (x >= 0 && x < screenWidth && y >= 0 && y < screenHeight) {
-            return screenLines[y].cells[x].character;
+            return screenLines[y].getCell(x).getCharacter();
         }
 
         // TODO: Think about what will be the default char to return
@@ -305,11 +305,15 @@ public class TerminalBuffer {
         }
 
         Line line = getScrollbackLineAt(y);
-        if (line == null || line.cells == null || line.cells[x] == null) {
+        if (line == null) {
             return ' ';
         }
 
-        return line.cells[x].character;
+        Cell cell = line.getCell(x);
+        if (cell == null) {
+            return ' ';
+        }
+        return cell.getCharacter();
     }
 
     public TextAttributes getScreenAttributesAt(int x, int y) {
@@ -317,12 +321,12 @@ public class TerminalBuffer {
             return DEFAULT_TEXT_ATTRIBUTES;
         }
 
-        Cell cell = screenLines[y].cells[x];
+        Cell cell = screenLines[y].getCell(x);
         if (cell == null) {
             return DEFAULT_TEXT_ATTRIBUTES;
         }
 
-        return new TextAttributes(cell.foreground, cell.background, cell.styles);
+        return cell.getAttributes();
     }
 
     public Line getScrollbackLineAt(int y) {
@@ -350,7 +354,7 @@ public class TerminalBuffer {
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < screenHeight; i++) {
             for (int j = 0; j < screenWidth; j++) {
-                result.append(screenLines[i].cells[j].character);
+                result.append(screenLines[i].getCell(j).getCharacter());
             }
             result.append('\n');
         }
@@ -361,14 +365,14 @@ public class TerminalBuffer {
         StringBuilder result = new StringBuilder();
         for (Line line : scrollback) {
             for (int j = 0; j < screenWidth; j++) {
-                result.append(line.cells[j].character);
+                result.append(line.getCell(j).getCharacter());
             }
             result.append('\n');
         }
 
         for (int i = 0; i < screenHeight; i++) {
             for (int j = 0; j < screenWidth; j++) {
-                result.append(screenLines[i].cells[j].character);
+                result.append(screenLines[i].getCell(j).getCharacter());
             }
             result.append('\n');
         }
@@ -404,10 +408,8 @@ public class TerminalBuffer {
 
     private void writeChar(char c) {
         Cell currCell = ensureCell(cursor.y(), cursor.x());
-        currCell.character = c;
-        currCell.foreground = currentTextAttributes.foreground();
-        currCell.background = currentTextAttributes.background();
-        currCell.styles = currentTextAttributes.styles();
+        currCell.setCharacter(c);
+        currCell.setAttributes(currentTextAttributes);
 
         int cursorIdx = cursor.x() + cursor.y() * screenWidth;
         contentEndIdx = Math.max(contentEndIdx, cursorIdx + 1);
@@ -469,21 +471,17 @@ public class TerminalBuffer {
     }
 
     private Line createEmptyLine() {
-        Line line = new Line(screenWidth);
-        for (int i = 0; i < screenWidth; i++) {
-            line.cells[i] = new Cell(BLACK, BG_BLACK, "", ' ');
-        }
-        return line;
+        return new Line(screenWidth, DEFAULT_TEXT_ATTRIBUTES);
     }
 
     private Cell ensureCell(int lineIdx, int cellIdx) {
         if (screenLines[lineIdx] == null) {
             screenLines[lineIdx] = createEmptyLine();
         }
-        if (screenLines[lineIdx].cells[cellIdx] == null) {
-            screenLines[lineIdx].cells[cellIdx] = new Cell(BLACK, BG_BLACK, "", ' ');
+        if (screenLines[lineIdx].getCell(cellIdx) == null) {
+            screenLines[lineIdx].setCell(cellIdx, new Cell(DEFAULT_TEXT_ATTRIBUTES, ' '));
         }
-        return screenLines[lineIdx].cells[cellIdx];
+        return screenLines[lineIdx].getCell(cellIdx);
     }
 
     private Cell getCellAtAbsoluteIndex(int absoluteIdx) {
@@ -494,17 +492,13 @@ public class TerminalBuffer {
 
     private void clearCell(int lineIdx, int cellIdx) {
         Cell cell = ensureCell(lineIdx, cellIdx);
-        cell.foreground = DEFAULT_TEXT_ATTRIBUTES.foreground();
-        cell.background = DEFAULT_TEXT_ATTRIBUTES.background();
-        cell.styles = DEFAULT_TEXT_ATTRIBUTES.styles();
-        cell.character = ' ';
+        cell.setAttributes(DEFAULT_TEXT_ATTRIBUTES);
+        cell.setCharacter(' ');
     }
 
     private void copyCell(Cell source, Cell target) {
-        target.foreground = source.foreground;
-        target.background = source.background;
-        target.styles = source.styles;
-        target.character = source.character;
+        target.setAttributes(source.getAttributes());
+        target.setCharacter(source.getCharacter());
     }
 
 
@@ -524,13 +518,14 @@ public class TerminalBuffer {
     }
 
     private String lineToDebugString(Line line) {
-        if (line == null || line.cells == null) {
+        if (line == null) {
             return "";
         }
 
-        StringBuilder result = new StringBuilder(line.cells.length);
-        for (Cell cell : line.cells) {
-            result.append(cell == null ? ' ' : cell.character);
+        StringBuilder result = new StringBuilder(line.length());
+        for (int i = 0; i < line.length(); i++) {
+            Cell cell = line.getCell(i);
+            result.append(cell == null ? ' ' : cell.getCharacter());
         }
         return result.toString();
     }

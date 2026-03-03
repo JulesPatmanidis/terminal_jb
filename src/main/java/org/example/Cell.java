@@ -1,15 +1,29 @@
 package org.example;
 
-public class Cell {
-    public String foreground;
-    public String background;
-    public String styles;
-    public char character;
+import java.util.Objects;
 
-    public Cell(String foreground, String background, String styles, char character) {
-        this.foreground = foreground;
-        this.background = background;
-        this.styles = styles;
+public class Cell {
+    private TextAttributes attributes;
+    private char character;
+
+    public Cell(TextAttributes attributes, char character) {
+        this.attributes = Objects.requireNonNull(attributes, "attributes");
+        this.character = character;
+    }
+
+    public TextAttributes getAttributes() {
+        return attributes;
+    }
+
+    public void setAttributes(TextAttributes attributes) {
+        this.attributes = Objects.requireNonNull(attributes, "attributes");
+    }
+
+    public char getCharacter() {
+        return character;
+    }
+
+    public void setCharacter(char character) {
         this.character = character;
     }
 }
