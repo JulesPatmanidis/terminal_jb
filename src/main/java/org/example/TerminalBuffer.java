@@ -96,9 +96,9 @@ public class TerminalBuffer {
     public static final String STRIKETHROUGH = "\u001B[9m";
 
     // Setup
-    private int screenWidth;
-    private int screenHeight;
-    private int maxScrollback;
+    private final int screenWidth;
+    private final int screenHeight;
+    private final int maxScrollback;
 
     // Attributes
     private static final TextAttributes DEFAULT_TEXT_ATTRIBUTES = new TextAttributes(BLACK, BG_BLACK, "");
@@ -112,8 +112,8 @@ public class TerminalBuffer {
     *
     *
     * */
-    private Line[] screenLines;
-    private Deque<Line> scrollback;
+    private final Line[] screenLines;
+    private final Deque<Line> scrollback;
     private int contentEndIdx;
 
     public TerminalBuffer(int width, int height, int maxScrollback) {
@@ -249,9 +249,8 @@ public class TerminalBuffer {
 
     public void fillLine(char character) {
         int startIdx = cursor.x();
-        int endIdx = screenWidth;
 
-        for (int i = startIdx; i < endIdx; i++) {
+        for (int i = startIdx; i < screenWidth; i++) {
             writeChar(character);
         }
     }
