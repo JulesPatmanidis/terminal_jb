@@ -19,7 +19,7 @@ public class TerminalBuffer {
     private TextAttributes currentTextAttributes;
     private Cursor cursor;
 
-    /*
+    /**
     * For now assume lines are fixed width
     * We split the viewable area into screen and scrollback, screen is simple array of lines,
     * scrollback is deque of lines for faster adding and removing top/bottom lines
@@ -310,7 +310,7 @@ public class TerminalBuffer {
      */
     public String getScreenLineAt(int y) {
         if (y < 0 || y >= screenHeight) {
-            return null;
+            return "";
         }
 
         StringBuilder result = new StringBuilder();
